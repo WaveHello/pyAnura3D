@@ -56,7 +56,6 @@ def overwrite_line_after_string(filename, target_string, new_value):
             # Otherwise, write the current line unchanged
             else:
                 file.write(line)
-    #TODO: Add
 
 def delete_files_with_extensions(directory, keep_extensions):
     try:
