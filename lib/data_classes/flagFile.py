@@ -21,28 +21,6 @@ class FlagFile(File):
     def __init__(self, file_dir):
         super().__init__(file_dir)
 
-    def modify_single_value_flags(self, flags, new_values):
-        """
-        Modify the value of a specific flag in the file.
-
-        Parameters
-        ----------
-        flag : str
-            The flag to search for in the file.
-        new_value : str
-            The new value to overwrite after the flag.
-        """
-        # Check that that flags and the new values are lists
-        # This will catach the catch the case when the input is a single value 
-        if not isinstance(flags, list):
-            flags = [flags]
-
-        if not isinstance(new_values, list):
-            new_values = [new_values]
-    
-        for flag, new_value in zip(flags, new_values):
-            overwrite_line_after_string(self.file_dir, str(flag), str(new_value))
-
     def get_flag_value(self, init_flag, end_symbol = "$$"):
         """
         Retrieve the value associated with a specific flag in the file.
