@@ -73,3 +73,74 @@ def delete_files_with_extensions(directory, keep_extensions):
         print("Files deleted successfully.")
     except Exception as e:
         print("An error occurred:", e)
+
+
+def check_ranges_overlap(d):
+    """
+    Check if any of the ranges in the dictionary overlap.
+    
+    Parameters
+    ----------
+    d : dict
+        A dictionary where values are tuples representing ranges (start, end).
+
+    Returns
+    -------
+    bool
+        True if there is any overlap between the ranges, False otherwise.
+    """
+    # Extract the ranges from the dictionary
+    ranges = list(d.values())
+    
+    # Sort ranges by their start values to simplify overlap checking
+    ranges.sort(key=lambda x: x[0])
+
+    # Check each range against the next one in the sorted list
+    for i in range(1, len(ranges)):
+        prev_end = ranges[i - 1][1]
+        current_start = ranges[i][0]
+        
+        # If the end of the previous range is greater than the start of the current range, they overlap
+        if prev_end > current_start:
+            return True  # Overlap found
+
+    return False  # No overlap found
+
+def sort_dict_by_range(d):
+    """
+    Sort a dictionary where keys are exclusive ranges represented as tuples.
+
+    Parameters
+    ----------
+    d : dict
+        A dictionary with tuple keys representing ranges (start, end).
+
+    Returns
+    -------
+    dict
+        A new dictionary sorted by the starting values of the range keys.
+    """
+    # Sort the items in the dictionary by the start of the range (the first element in each tuple key)
+    sorted_items = sorted(d.items(), key=lambda item: item[1][0])
+
+    
+    # Create a new dictionary to maintain the sorted order
+    sorted_dict = dict(sorted_items)
+    return sorted_dict
+
+def pad_integer_to_string(integer, pad_char, max_str_length):
+    """
+    Returns an integer inset into a string with length max_str_length that is padded with the pad
+    character
+    """
+
+    integer_str = str(integer)
+
+    if len(integer_str) > max_str_length:
+        raise ValueError("The length of the integer is too long.\n"
+                            f"Integer length: {len(integer_str)}\n"
+                            f"Max string length: {max_str_length}")
+    
+    padded_integer = integer_str.rjust(max_str_length, pad_char)
+
+    return padded_integer

@@ -1,8 +1,11 @@
-from lib.general_functions.general_functions import get_highest_file, overwrite_line_after_string, delete_files_with_extensions
+from lib.general_functions.general_functions import (get_highest_file, pad_integer_to_string,
+                                                      delete_files_with_extensions)
+
 from lib.general_functions.executing_runs import generate_batch_script
 from lib.benchmark_info.run_benchmarks_info import benchmark_info_dict # Dictionary that contains information about the benchmarks.
                                                                        # This should be converted into a JSON file that's loaded in
 from lib.data_classes.cpsClass import CPSFile
+from lib.data_classes.gomClass import GomFile
 
 import os
 import glob
@@ -72,10 +75,6 @@ class ModelSetup:
     def generate_batch_file(self, batch_file_name = "calculate.bat", batch_file_folder = None):
         "Generates the batch file to run the model using the input properties to the model"
         
-        print(self.model_folder_path)
-        print(self.exe_path)
-        print(self.model_path)
-        
         # generate the batch script 
         generate_batch_script(self.model_folder_path, self.exe_path, self.model_path, batch_file_name=batch_file_name, 
                               include_cd=False, batch_file_folder = batch_file_folder)
@@ -110,7 +109,7 @@ class ModelSetup:
             first_cps_file_id = 1
 
             # Get the id of the CPS file
-            cps_id = self._pad_integer_to_string(first_cps_file_id, pad_char="0", max_str_length=3)
+            cps_id = pad_integer_to_string(first_cps_file_id, pad_char="0", max_str_length=3)
             
             # Construct the cps file name
             file_name = self._make_id_file_name(self.model_name, file_extension, cps_id)
@@ -127,7 +126,7 @@ class ModelSetup:
 
         elif isinstance(which_file, int):
             # Get the id of the CPS file
-            cps_id = self._pad_integer_to_string(which_file, pad_char="0", max_str_length=3)
+            cps_id = pad_integer_to_string(which_file, pad_char="0", max_str_length=3)
             
             # Construct the cps file name
             file_name = self._make_id_file_name(self.model_name, file_extension, cps_id)
@@ -147,24 +146,19 @@ class ModelSetup:
 
         return cps_file_objs
     
-    @staticmethod
-    def _pad_integer_to_string(integer, pad_char, max_str_length):
+    def get_GOM_file(self):
         """
-        Returns an integer inset into a string with length max_str_length that is padded with the pad
-        character
+        Return the GOM file for the current model
         """
-
-        integer_str = str(integer)
-
-        if len(integer_str) > max_str_length:
-            raise ValueError("The length of the integer is too long.\n"
-                             f"Integer length: {len(integer_str)}\n"
-                             f"Max string length: {max_str_length}")
         
-        padded_integer = integer_str.rjust(max_str_length, pad_char)
+        # Make the file name
+        file_name = self.model_name + ".GOM"
 
-        return padded_integer
-    
+        # Make the path to the file
+        file_path = self._make_file_path(file_name)
+
+        return GomFile(file_path)
+        
     def _make_file_path(self, file_name, folder_path = None):
         "Returns a file name that is assumed to be inside of the model folder"
         if folder_path is None:
