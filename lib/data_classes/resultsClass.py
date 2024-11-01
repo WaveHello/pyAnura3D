@@ -18,9 +18,9 @@ class ModelResults:
     Class to represent the results of the driver model
     """
 
-    def __init__(self, results_folder_path, flag_3D = True):
+    def __init__(self, folder, flag_3D = True):
         # Store the folder that the results are in
-        self.results_folder_path = results_folder_path
+        self.folder = folder
 
         self.par_files = []
         self.num_par_files = len(self.par_files)
@@ -29,7 +29,7 @@ class ModelResults:
 
     def __str__(self) -> str:
         return_string = (
-                         f"Results folder path: {self.results_folder_path}\n"
+                         f"Results folder path: {self.folder.folder_dir}\n"
                          f"Number of par files: {self.par_files}\n"
         )
 
@@ -52,7 +52,7 @@ class ModelResults:
         """
 
         # Get the path to the results folder (assumes self.results_folder is defined)
-        results_folder = self.results_folder_path
+        results_folder = self.folder.folder_dir
 
         # List to store par file objects
         self.par_files = []
@@ -83,7 +83,7 @@ class ModelResults:
         """
 
         # Get the path to the results folder (assumes self.results_folder is defined)
-        results_folder = self.results_folder_path
+        results_folder = self.folder.folder_dir
 
         for filename in os.listdir(results_folder):
             if '.OUT' in filename:

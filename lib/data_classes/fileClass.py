@@ -64,7 +64,7 @@ class File:
         """
         return self.file_name  # Get file name from directory path
 
-    def new_file_name(self, new_name):
+    def new_file_name(self, new_name, overwrite = True):
         """
         Update the file name and physically rename the file on the file system.
 
@@ -80,18 +80,18 @@ class File:
         OSError
             If renaming the file fails.
         """
-        # Store the old file name and directory
-        old_name = self.file_name
-        old_dir = self.file_dir
+        old_dir = self.file_dir  # Current file path
+        new_dir = new_name  # Target file path
+        
+        # Check if the target file exists, and delete it if it does
+        if overwrite and os.path.exists(new_dir):
+            os.remove(new_dir)
 
-        # Update the file directory with the new file name
-        self.file_dir = self.file_dir.replace(old_name, new_name)
-
-        # Update the stored file name
+        # Rename the file to the new name
+        os.rename(old_dir, new_dir)
+        
+        # Update the object's file name
         self.file_name = new_name
-
-        # Actually rename the physical file
-        os.rename(old_dir, self.file_dir)
 
 
 if __name__ == "__main__":

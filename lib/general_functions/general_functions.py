@@ -67,7 +67,7 @@ def delete_files_with_extensions(directory, keep_extensions):
         
         # Delete the files that don't have the specified extensions
         for file in files:
-            if file not in files_to_keep:
+            if not file in files_to_keep:
                 os.remove(os.path.join(directory, file))
         
         print("Files deleted successfully.")
@@ -144,3 +144,6 @@ def pad_integer_to_string(integer, pad_char, max_str_length):
     padded_integer = integer_str.rjust(max_str_length, pad_char)
 
     return padded_integer
+
+def create_folder_if_not_exists(folder_path):
+    os.makedirs(folder_path, exist_ok=True)
