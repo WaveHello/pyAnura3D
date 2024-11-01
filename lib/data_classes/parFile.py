@@ -2,6 +2,7 @@ import datetime
 import os
 import pandas as pd  # Import pandas for easy CSV parsing
 import matplotlib.pyplot as plt
+import numpy as np
 
 # Library imports
 from lib.data_classes.fileClass import File
@@ -48,6 +49,10 @@ class ParFile(File):
         self.stress_df     = None
         self.strain_df     = None
         self.state_vars_df = None
+        self.base_strain_cols = None
+        self.base_stress_cols = None
+
+        self.invar_names = {"p":"p", "q":"q", "eps_p":"eps_p", "eps_q":"eps_q"} # Make a dict to hold the default invar names
 
     def __str__(self):
         info = (
@@ -121,19 +126,19 @@ class ParFile(File):
 
         return header, data
 
-    def store_times(self,
-                    col_names = ["time(1)", "time(2)"]):
-        """
-        Store the times
-        TODO: Don't know the difference between time1 and 2
-        """
+    # def store_times(self,
+    #                 col_names = ["time(1)", "time(2)"]):
+    #     """
+    #     Store the times
+    #     TODO: Don't know the difference between time1 and 2
+    #     """
 
-        if self.output_df is None:
-            df = self.get_output_file_as_df()
-        else:
-            df = self.output_df
+    #     if self.output_df is None:
+    #         df = self.get_output_file_as_df()
+    #     else:
+    #         df = self.output_df
 
-        self.time_df = df[col_names]
+    #     self.time_df = df[col_names]
  
     def store_output_stress(self, col_names = None):
         """
@@ -156,8 +161,8 @@ class ParFile(File):
         # num_rows = self.data.shape[0]
 
         # # Make a list of zeros
-
-        self.stress_df = self.data[col_names]
+        self.base_stress_cols = col_names
+        self.stress_df = self.data[col_names].copy()
 
     def store_output_strains(self, col_names = None):
         # full_col_names = ["EpsilonXX", "EpsilonYY","EpsilonZZ","GammaXY","GammaYZ", "GammaZX"]
@@ -169,50 +174,91 @@ class ParFile(File):
             # 2d model
             col_names = ["EpsilonXX", "EpsilonYY", "EpsilonZZ", "GammaXY"] 
 
-        self.strain_df = self.data[col_names]
+        self.base_strain_cols = col_names
+        self.strain_df = self.data[col_names].copy()
 
     def get_mean_stress(self):
         """
         Returns the mean stress applied to a df
         """
+        cols = self.base_stress_cols
+        mean_stress = self.stress_df[cols].apply(calc_mean_stress, axis = 1).copy()
 
-        mean_stress = self.stress_df.apply(calc_mean_stress, axis = 1)
-
-        return mean_stress
+        return np.array(mean_stress)
     
     def get_q_invariant(self):
         """
         Returns the deviatoric stress invariant
         """
-
+        cols = self.base_stress_cols
         if self.flag_3D:
-            q = self.stress_df.apply(calc_q_invariant, axis = 1)
+            q = self.stress_df[cols].apply(calc_q_invariant, axis = 1).copy()
         else:
             raise NotImplementedError("Calcing q for 2d isn't impelemented")
         
-        return q
+        return np.array(q)
 
     def get_volumetric_strain(self):
         """
         Returns the volumetric strain using the strain df
         """
+        cols = self.base_strain_cols
         if self.flag_3D:
-            eps_p = self.strain_df.apply(calc_volumetric_strain_invariant, axis = 1)
+            eps_p = self.strain_df[cols].apply(calc_volumetric_strain_invariant, axis = 1).copy()
         else:
             raise NotImplementedError("Calcing epsV for 2d isn't impelemented")
-        return eps_p
+        return np.array(eps_p)
     
     def get_deviatoric_strain(self):
         """
         Returns the deviatoric strain
         """
+        cols = self.base_strain_cols
         if self.flag_3D:
-            eps_q = self.strain_df.apply(lambda row: calc_dev_strain_invariant(row), axis = 1)
+            eps_q = self.strain_df[cols].apply(lambda row: calc_dev_strain_invariant(row), axis = 1).copy()
         else:
             raise NotImplementedError("Calculating epsq isn't implemented for 2D")
-        return eps_q
+        return np.array(eps_q)
     
-    def quick_plot_stress(self, figsize = (8, 4), compression_pos = True, axs = None, **kwargs):
+    def load_mean_stress(self, name = "p", recalc = False):
+        """
+        Load the mean stress
+        """
+        if name not in self.stress_df.columns or recalc:
+            self.stress_df.loc[:, name] = self.get_mean_stress()
+            # Update the name of the invariant 
+            self.invar_names["p"] = name
+
+    def load_q_invariant(self, name = "q", recalc = False):
+        """
+        Load the equivalent stress (q)
+        """
+        if name not in self.stress_df.columns or recalc:
+            self.stress_df.loc[:, name] = self.get_q_invariant()
+            # Update the name of the invariant
+            self.invar_names["q"] = name
+
+    def load_volumetric_strain(self, name = "eps_p", recalc = False):
+        """
+        Load the volumetric strain
+        """
+        if name not in self.strain_df.columns or recalc:
+            self.strain_df.loc[:, name] = self.get_volumetric_strain()
+            # Update the name of the invariant
+            self.invar_names["eps_p"] = name
+
+    def load_deviatoric_strain(self, name = "eps_q", recalc = False):
+        """
+        Load eps_q into the data frame
+        """
+
+        if name not in self.strain_df.columns or recalc:
+            self.strain_df.loc[:, name] = self.get_deviatoric_strain()
+            # Update the name of the invariant
+            self.invar_names["eps_q"] = name
+
+    def quick_plot_stress(self, figsize = (8, 4), compression_pos = True, axs = None, 
+                          recalc = True, **kwargs):
         """
         Make the q vs. p plot
         """
@@ -228,9 +274,11 @@ class ParFile(File):
         else:
             sign = 1.0
 
+        self.load_mean_stress(recalc=recalc)
+        self.load_q_invariant(recalc=recalc)
         # Calc the q invariant
-        mean_stress = sign * self.get_mean_stress()
-        q           = self.get_q_invariant()
+        mean_stress = sign * self.stress_df[self.invar_names["p"]]
+        q           = self.stress_df[self.invar_names["q"]]
 
         axs.plot(mean_stress, q, **kwargs)
 
@@ -239,7 +287,7 @@ class ParFile(File):
         axs.set_xlabel("Mean Stress")
         axs.set_ylabel("Deviatoric Stress")
 
-    def quick_plot_strain(self, figsize = (8, 4), compression_pos = True, axs = None, **kwargs):
+    def quick_plot_strain(self, figsize = (8, 4), compression_pos = True, recalc = True, axs = None, **kwargs):
         """
         Make the $eps_q$ vs. $eps_v$ plot
         """
@@ -253,8 +301,11 @@ class ParFile(File):
         if axs is None:
             fig, axs = plt.subplots(nrows = 1, ncols = 1, figsize = figsize)
         
-        eps_p = sign * self.get_volumetric_strain()
-        eps_q = self.get_deviatoric_strain()
+        self.load_volumetric_strain(recalc=recalc)
+        self.load_deviatoric_strain(recalc=recalc)
+
+        eps_p = sign * self.strain_df[self.invar_names["eps_p"]]
+        eps_q = self.strain_df[self.invar_names["eps_q"]]
 
         axs.plot(eps_p, eps_q, **kwargs)
 
@@ -263,8 +314,8 @@ class ParFile(File):
         axs.set_ylabel(r"Deviatoric strain invar, $\epsilon_{q}$")
 
     def quick_quad_plot(self, axs = None, figsize = (10,10), axial_strain_id = "EpsilonYY",
-                        stress_units = "kPa", strain_units = "-",
-                        compression_pos = True, legend = False, labels:list = [],
+                        stress_units = "kPa", strain_units = "-", recalc = True,
+                        compression_pos = True, legend = [False], labels:list = [],
                           **kwargs):
         """
         Make the quad plot that is really helpful for visualizing soil
@@ -274,24 +325,37 @@ class ParFile(File):
         if axs is None:
             fig, axs = plt.subplots(nrows = 2, ncols = 2, figsize = figsize)
 
-        if legend and len(labels) == 1:
+        if len(legend) == 1:
+            legend = legend * 4
+        elif len(legend) !=4:
+            raise IndexError("Length of legend has to be 1 or number of axs (4)")
+        
+        if any(legend) and len(labels) == 1:
             # For the case when the label is the same for all the plots duplicate the single value
             labels = labels * 4
-
-        elif legend and len(labels) != 4:
+        elif any(legend) and len(labels) != 4:
             raise IndexError("Length of labels has to be 1 or number of axs (4)")
-            
+        
+        if legend and len(labels) ==1:
+            labels
         if compression_pos:
             # flip the sign of the values
             sign = -1.0
         else:
             sign = 1.0
 
+        self.load_mean_stress(recalc = recalc)
+        self.load_q_invariant(recalc = recalc)
+        self.load_volumetric_strain(recalc = recalc)
+
+        # Load this guy just in case you want to use it instead of the axial strain
+        self.load_deviatoric_strain(recalc = recalc)
+
         # Get the data
         axial_strain = sign * self.strain_df[axial_strain_id]
-        mean_stress  = sign * self.get_mean_stress()
-        q            = self.get_q_invariant()
-        vol_strain   = sign * self.get_volumetric_strain()
+        mean_stress  = sign * self.stress_df[self.invar_names["p"]]
+        q            = self.stress_df[self.invar_names["q"]]
+        vol_strain   = sign * self.strain_df[self.invar_names["eps_p"]]
 
 
         # Make the q vs. axial strain \epsilon_{a}
@@ -302,7 +366,7 @@ class ParFile(File):
         axs[0,0].set_xlabel(r"$\epsilon_{a}$ " + f"[{strain_units}]")
         axs[0,0].set_ylabel(f"q [{stress_units}]")
         
-        if legend:
+        if legend[0]:
             axs[0,0].legend()
 
         # Make the q vs. p plot
@@ -313,7 +377,7 @@ class ParFile(File):
         axs[0, 1].set_xlabel(f"p [{stress_units}]")
         axs[0, 1].set_ylabel(f"q [{stress_units}]")
 
-        if legend:
+        if legend[1]:
             axs[0, 1].legend()
 
         # Make the \epislon_{v} vs \epsilon_{a} plot
@@ -324,7 +388,7 @@ class ParFile(File):
         axs[1, 0].set_xlabel(r"$\epsilon_{a}$" +  f"[{strain_units}]")
         axs[1, 0].set_ylabel(r"$\epsilon_{v}$" +  f"[{strain_units}]")
 
-        if legend:
+        if legend[2]:
             axs[1, 0].legend()
 
         # Make the \episilon_{v} vs. p plot
@@ -335,7 +399,7 @@ class ParFile(File):
         axs[1, 1].set_xlabel(f"p [{stress_units}]")
         axs[1, 1].set_ylabel(r"$\epsilon_{v}$" +  f"[{strain_units}]")
 
-        if legend:
+        if legend[3]:
             axs[1, 1].legend()
 
         # Help make the plots not overlap

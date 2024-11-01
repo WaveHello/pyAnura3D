@@ -124,7 +124,7 @@ class Folder:
         #TODO: Make this overwritable in the future
         delete_files_with_extensions(self.folder_dir, keep_extensions)
 
-    def copy_files_2_folder(self, new_folder_dir):
+    def copy_files_2_folder(self, new_folder_dir, overwrite = True):
         """
         Copy all files from the current folder to a new folder.
         
@@ -140,7 +140,10 @@ class Folder:
             
             # Only copy files (skip directories)
             if os.path.isfile(file_path):
-                shutil.copy(file_path, new_folder_dir)
+                if overwrite:
+                    shutil.copy2(file_path, new_folder_dir)
+                else:
+                    shutil.copy(file_path, new_folder_dir)
 
 
 
