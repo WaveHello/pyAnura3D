@@ -262,7 +262,7 @@ class ParFile(File):
         axs.set_xlabel(r"Volumetric strain invariant, $\epsilon_{p}$")
         axs.set_ylabel(r"Deviatoric strain invar, $\epsilon_{q}$")
 
-    def quick_quad_plot(self, axs = None, figsize = (10,10), axial_strain_id = "EpsilonXX",
+    def quick_quad_plot(self, axs = None, figsize = (10,10), axial_strain_id = "EpsilonYY",
                         stress_units = "kPa", strain_units = "-",
                         compression_pos = True, legend = False, labels:list = [],
                           **kwargs):
@@ -275,7 +275,11 @@ class ParFile(File):
             fig, axs = plt.subplots(nrows = 2, ncols = 2, figsize = figsize)
 
         if legend and len(labels) == 1:
+            # For the case when the label is the same for all the plots duplicate the single value
             labels = labels * 4
+
+        elif legend and len(labels) != 4:
+            raise IndexError("Length of labels has to be 1 or number of axs (4)")
             
         if compression_pos:
             # flip the sign of the values
